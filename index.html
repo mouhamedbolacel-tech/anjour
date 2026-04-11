@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>أنجور — تحليل المحتوى الإعلامي بالذكاء الاصطناعي</title>
+<meta name="description" content="منصة أنجور: تحليل المحتوى الإعلامي بالذكاء الاصطناعي للصحفيين والمحررين في الجزائر والعالم العربي.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&family=Cairo+Play:wght@700;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --emerald: #10d9a4;
+  --blue: #0ea5e9;
+  --purple: #a78bfa;
+  --bg: #080f1a;
+  --surface: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.08);
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --hint: #475569;
+}
+
+body {
+  font-family: 'Cairo', sans-serif;
+  direction: rtl;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+/* ─── LAYOUT ─── */
+.page { display: none; flex-direction: column; min-height: 100vh; }
+.page.active { display: flex; }
+
+.bg-mesh {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 15% 15%, rgba(16,217,164,.07) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 60% at 85% 85%, rgba(14,165,233,.08) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(167,139,250,.04) 0%, transparent 70%);
+}
+.dot-grid {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .25;
+  background-image: radial-gradient(circle, #1e3a5f 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+.nav {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 18px 40px;
+  position: relative; z-index: 20;
+  border-bottom: 1px solid var(--border);
+  background: rgba(8,15,26,.8);
+  backdrop-filter: blur(12px);
+  position: sticky; top: 0;
+}
+.nav-logo {
+  font-family: 'Cairo Play','Cairo',sans-serif;
+  font-size: 26px; font-weight: 900;
+  background: linear-gradient(135deg, var(--emerald), var(--blue));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.nav-badge {
+  font-size: 11px; font-weight: 700;
+  background: rgba(16,217,164,.12); color: var(--emerald);
+  border: 1px solid rgba(16,217,164,.28);
+  padding: 3px 10px; border-radius: 20px;
+}
+
+.main-content { max-width: 700px; margin: 0 auto; padding: 32px 24px; }
+
+/* ─── BUTTONS ─── */
+.btn-primary {
+  background: linear-gradient(135deg, var(--emerald), var(--blue));
+  color: var(--bg); border: none; border-radius: 12px;
+  padding: 14px 28px;
+  font-family: 'Cairo',sans-serif; font-size: 16px; font-weight: 700;
+  cursor: pointer; transition: transform .2s, opacity .2s;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-primary:hover { transform: translateY(-2px); opacity: .92; }
+.btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+.btn-ghost {
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 20px;
+  font-family: 'Cairo',sans-serif; font-size: 14px;
+  cursor: pointer; transition: background .2s;
+}
+.btn-ghost:hover { background: rgba(255,255,255,.09); }
+
+/* ─── HERO ─── */
+.hero-title {
+  font-family: 'Cairo Play','Cairo',sans-serif;
+  font-size: clamp(72px, 12vw, 120px); font-weight: 900;
+  background: linear-gradient(135deg, var(--emerald) 0%, var(--blue) 45%, var(--purple) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  line-height: 1; letter-spacing: -3px;
+}
+.hero-glow {
+  position: absolute; width: 700px; height: 700px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(16,217,164,.06) 0%, transparent 65%);
+  top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none;
+}
+
+.tag-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; border: 1px solid;
+}
+
+.feature-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+  padding: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  transition: border-color .25s, background .25s;
+}
+.feature-card:hover { border-color: rgba(16,217,164,.22); background: rgba(16,217,164,.03); }
+
+/* ─── ANALYZE ─── */
+.input-tab {
+  padding: 8px 18px; border-radius: 8px;
+  font-family: 'Cairo',sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: 1px solid transparent; transition: all .2s;
+  color: var(--muted); background: transparent;
+}
+.input-tab.active { background: rgba(16,217,164,.12); color: var(--emerald); border-color: rgba(16,217,164,.3); }
+.input-tab:hover:not(.active) { color: var(--text); background: rgba(255,255,255,.05); }
+
+textarea.anjour-text, input.anjour-input {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; color: var(--text);
+  font-family: 'Cairo',sans-serif; font-size: 15px; padding: 14px 16px;
+  direction: rtl; transition: border-color .2s;
+}
+textarea.anjour-text { min-height: 200px; resize: vertical; line-height: 1.9; }
+textarea.anjour-text:focus, input.anjour-input:focus { outline: none; border-color: rgba(16,217,164,.4); }
+textarea.anjour-text::placeholder, input.anjour-input::placeholder { color: var(--hint); }
+
+.drop-zone {
+  border: 2px dashed rgba(16,217,164,.28); border-radius: 20px;
+  padding: 48px; text-align: center; cursor: pointer;
+  transition: all .3s; background: rgba(16,217,164,.02);
+  min-height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+}
+.drop-zone:hover, .drop-zone.drag-over { border-color: var(--emerald); background: rgba(16,217,164,.06); }
+
+.warning-banner {
+  background: rgba(251,191,36,.07); border: 1px solid rgba(251,191,36,.22);
+  border-radius: 10px; padding: 11px 15px; font-size: 13px; color: #fbbf24;
+  display: flex; gap: 8px; align-items: flex-start; line-height: 1.75;
+}
+
+/* ─── RESULTS ─── */
+.glass-card {
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 18px;
+}
+
+.result-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 22px 26px; margin-bottom: 16px;
+  opacity: 0; transform: translateY(16px);
+}
+.result-card.animate { animation: fadeUp .55s ease forwards; }
+
+.card-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+  font-size: 12px; font-weight: 700; color: var(--emerald);
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.card-icon {
+  width: 34px; height: 34px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+
+.progress-bg { background: rgba(255,255,255,.08); border-radius: 20px; height: 10px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 20px; transition: width 1.8s cubic-bezier(.25,1,.5,1); }
+
+.claim-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.05);
+  font-size: 14px; line-height: 1.85; color: #cbd5e1;
+}
+.claim-item:last-child { border-bottom: none; }
+.claim-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--emerald); margin-top: 9px; flex-shrink: 0; }
+
+.emotion-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; font-size: 13px; }
+.emotion-lbl { width: 72px; color: var(--muted); font-weight: 600; flex-shrink: 0; text-align: right; }
+.emotion-pct { width: 34px; color: var(--text); font-weight: 700; flex-shrink: 0; }
+
+.suggestion-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 11px 14px;
+  background: rgba(16,217,164,.05); border: 1px solid rgba(16,217,164,.1);
+  border-radius: 10px; margin-bottom: 8px;
+  font-size: 14px; line-height: 1.8; color: #cbd5e1;
+}
+
+.stat-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: 7px; font-size: 12px; font-weight: 700;
+}
+
+.spinner {
+  width: 46px; height: 46px;
+  border: 3px solid rgba(16,217,164,.15); border-top-color: var(--emerald);
+  border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto;
+}
+
+/* ─── ANIMATIONS ─── */
+@keyframes spin   { to { transform: rotate(360deg); } }
+@keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse  { 0%,100%{opacity:.7} 50%{opacity:1} }
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(16,217,164,.22); border-radius: 3px; }
+
+@media (max-width: 600px) {
+  .nav { padding: 14px 20px; }
+  .main-content { padding: 20px 16px; }
+  .hero-title { letter-spacing: -1px; }
+  .two-col { grid-template-columns: 1fr !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     LANDING PAGE
+═══════════════════════════════════════════ -->
+<div id="page-landing" class="page active">
+  <div class="bg-mesh"></div>
+  <div class="dot-grid"></div>
+
+  <nav class="nav">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="nav-logo">أنجور</span>
+      <span class="nav-badge">مجاني 100%</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span style="font-size:12px;color:var(--hint);">مدعوم بـ</span>
+      <span style="font-size:13px;font-weight:700;color:var(--muted);">Claude AI</span>
+    </div>
+  </nav>
+
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;position:relative;z-index:1;">
+    <div class="hero-glow"></div>
+
+    <div style="margin-bottom:22px;">
+      <span class="tag-pill" style="background:rgba(16,217,164,.08);color:var(--emerald);border-color:rgba(16,217,164,.25);">
+        ✦ أداة الصحفيين في الجزائر والعالم العربي
+      </span>
+    </div>
+
+    <h1 class="hero-title">أنجور</h1>
+
+    <p style="font-size:clamp(17px,2.8vw,24px);color:var(--muted);margin:20px 0 10px;font-weight:400;max-width:560px;line-height:1.65;">
+      تحليل المحتوى الإعلامي بالذكاء الاصطناعي
+    </p>
+    <p style="font-size:14px;color:var(--hint);margin-bottom:38px;max-width:480px;line-height:2;">
+      حلّل أي مقال أو منشور أو تقرير في ثوانٍ — اكتشف التحيز، الادعاءات، المشاعر، والإطار الإعلامي.
+    </p>
+
+    <button class="btn-primary" onclick="showPage('analyze')" style="font-size:19px;padding:18px 44px;margin-bottom:42px;">
+      ابدأ التحليل الآن ←
+    </button>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:44px;">
+      <span class="tag-pill" style="background:rgba(255,255,255,.03);color:var(--hint);border-color:rgba(255,255,255,.08);font-size:12px;">📄 مقال إخباري</span>
+      <span class="tag-pill" style="background:rgba(255,255,255,.03);color:var(--hint);border-color:rgba(255,255,255,.08);font-size:12px;">💬 منشور رأي</span>
+      <span class="tag-pill" style="background:rgba(255,255,255,.03);color:var(--hint);border-color:rgba(255,255,255,.08);font-size:12px;">📰 تقرير صحفي</span>
+      <span class="tag-pill" style="background:rgba(255,255,255,.03);color:var(--hint);border-color:rgba(255,255,255,.08);font-size:12px;">🔗 بيان رسمي</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;max-width:720px;width:100%;">
+      <div class="feature-card">
+        <div style="font-size:28px;">🔍</div>
+        <div style="font-weight:700;font-size:15px;">كشف التحيز</div>
+        <div style="font-size:13px;color:var(--hint);line-height:1.7;">تحديد الانحياز الإعلامي في الصياغة والمحتوى</div>
+      </div>
+      <div class="feature-card">
+        <div style="font-size:28px;">📊</div>
+        <div style="font-weight:700;font-size:15px;">تحليل المشاعر</div>
+        <div style="font-size:13px;color:var(--hint);line-height:1.7;">قياس النبرة العاطفية بمؤشرات مرئية دقيقة</div>
+      </div>
+      <div class="feature-card">
+        <div style="font-size:28px;">⚡</div>
+        <div style="font-weight:700;font-size:15px;">تحقق فوري</div>
+        <div style="font-size:13px;color:var(--hint);line-height:1.7;">نتائج خلال ثوانٍ بدون تسجيل أو رسوم</div>
+      </div>
+      <div class="feature-card">
+        <div style="font-size:28px;">🛡️</div>
+        <div style="font-weight:700;font-size:15px;">موثوقية المحتوى</div>
+        <div style="font-size:13px;color:var(--hint);line-height:1.7;">نسبة مئوية لمصداقية المحتوى الإعلامي</div>
+      </div>
+    </div>
+
+    <p style="margin-top:48px;font-size:12px;color:#1e2d42;">
+      Anjour · مبني بالذكاء الاصطناعي · للصحفيين فقط
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     ANALYZE PAGE
+═══════════════════════════════════════════ -->
+<div id="page-analyze" class="page">
+  <div class="bg-mesh"></div>
+  <div class="dot-grid"></div>
+
+  <nav class="nav">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="btn-ghost" onclick="showPage('landing')" style="padding:7px 14px;font-size:13px;">← العودة</button>
+      <span class="nav-logo">أنجور</span>
+    </div>
+    <span style="font-size:13px;color:var(--hint);">أدخل المحتوى للتحليل</span>
+  </nav>
+
+  <div style="flex:1;overflow-y:auto;position:relative;z-index:1;">
+    <div class="main-content">
+
+      <div style="text-align:center;margin-bottom:34px;">
+        <h2 style="font-size:30px;font-weight:800;margin-bottom:10px;">حلّل محتواك الإعلامي</h2>
+        <p style="font-size:14px;color:var(--hint);">مقال · منشور · تقرير · بيان رسمي</p>
+      </div>
+
+      <!-- Tabs -->
+      <div style="display:flex;gap:6px;padding:6px;background:rgba(255,255,255,.03);border-radius:12px;margin-bottom:22px;border:1px solid var(--border);">
+        <button class="input-tab active" id="tab-text"   onclick="switchTab('text')">✍️ نص مباشر</button>
+        <button class="input-tab"        id="tab-url"    onclick="switchTab('url')">🔗 رابط</button>
+        <button class="input-tab"        id="tab-upload" onclick="switchTab('upload')">📁 رفع ملف</button>
+      </div>
+
+      <!-- Text -->
+      <div id="input-text">
+        <textarea class="anjour-text" id="content-text"
+          placeholder="الصق هنا نص المقال أو المنشور أو التقرير...&#10;&#10;يمكنك أيضاً كتابة نصك مباشرةً."></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:9px;">
+          <span style="font-size:12px;color:var(--hint);" id="char-count">0 حرف</span>
+          <button class="btn-ghost" onclick="loadExample()" style="font-size:12px;padding:6px 14px;">جرّب مثالاً</button>
+        </div>
+      </div>
+
+      <!-- URL -->
+      <div id="input-url" style="display:none;">
+        <input type="url" class="anjour-input" id="content-url" placeholder="https://...  رابط المقال أو المنشور">
+        <p style="font-size:12px;color:var(--hint);margin-top:10px;line-height:1.8;">
+          💡 في النسخة الحالية: انسخ النص من الرابط والصقه في خانة "نص مباشر" للحصول على أفضل تحليل.
+          دعم الاستخراج التلقائي من الروابط قريباً.
+        </p>
+      </div>
+
+      <!-- Upload -->
+      <div id="input-upload" style="display:none;">
+        <div class="drop-zone" id="drop-zone"
+             onclick="document.getElementById('file-input').click()"
+             ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragleave="onDragLeave(event)">
+          <div style="font-size:50px;margin-bottom:6px;">📂</div>
+          <div style="font-size:17px;font-weight:700;margin-bottom:6px;">اسحب ملفك هنا أو انقر للاختيار</div>
+          <div style="font-size:13px;color:var(--hint);">TXT — حجم أقصى 5MB</div>
+          <input type="file" id="file-input" style="display:none;" accept=".txt" onchange="onFileChange(event)">
+        </div>
+        <div id="file-info" style="display:none;margin-top:12px;font-size:13px;color:var(--emerald);font-weight:600;"></div>
+      </div>
+
+      <!-- Warning -->
+      <div class="warning-banner" style="margin-top:20px;margin-bottom:22px;">
+        <span>⚠️</span>
+        <span>هذا التحليل مدعوم بالذكاء الاصطناعي. يُنصح دائماً بالتدقيق البشري والتحقق من المصادر الأصلية قبل النشر.</span>
+      </div>
+
+      <!-- Submit -->
+      <button class="btn-primary" onclick="startAnalysis()" id="analyze-btn"
+              style="width:100%;justify-content:center;font-size:18px;padding:18px;">
+        🔍 حلّل المحتوى الآن
+      </button>
+
+      <div id="error-msg" style="display:none;margin-top:14px;background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.22);border-radius:10px;padding:13px 15px;font-size:13px;color:#f87171;line-height:1.7;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     RESULTS PAGE
+═══════════════════════════════════════════ -->
+<div id="page-results" class="page">
+  <div class="bg-mesh"></div>
+  <div class="dot-grid"></div>
+
+  <nav class="nav">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="btn-ghost" onclick="showPage('analyze')" style="padding:7px 14px;font-size:13px;">← تحليل جديد</button>
+      <span class="nav-logo">أنجور</span>
+    </div>
+    <span style="font-size:13px;color:var(--emerald);font-weight:700;">📊 نتائج التحليل</span>
+  </nav>
+
+  <!-- Loading -->
+  <div id="loading-state" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;position:relative;z-index:1;">
+    <div class="spinner"></div>
+    <div style="text-align:center;">
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px;animation:pulse 1.8s infinite;" id="loading-text">جارٍ تحليل المحتوى...</div>
+      <div style="font-size:13px;color:var(--hint);">Claude AI يدرس المحتوى بعمق واحترافية</div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results-content" style="display:none;flex:1;flex-direction:column;">
+    <div style="flex:1;overflow-y:auto;position:relative;z-index:1;">
+      <div class="main-content">
+
+        <!-- Trust score -->
+        <div class="glass-card" id="trust-card" style="padding:22px 28px;margin-bottom:18px;display:flex;align-items:center;gap:26px;opacity:0;transform:translateY(12px);">
+          <div style="flex:1;">
+            <div style="font-size:12px;font-weight:700;color:var(--emerald);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">نسبة الموثوقية</div>
+            <div class="progress-bg">
+              <div class="progress-fill" id="trust-bar" style="width:0%;background:linear-gradient(90deg,var(--emerald),var(--blue));"></div>
+            </div>
+            <div style="font-size:12px;color:var(--hint);margin-top:7px;" id="trust-label">—</div>
+          </div>
+          <div style="text-align:center;flex-shrink:0;">
+            <div style="font-size:48px;font-weight:900;line-height:1;" id="trust-score">—</div>
+            <div style="font-size:11px;color:var(--hint);font-weight:700;margin-top:2px;">/ 100</div>
+          </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="result-card" id="card-summary">
+          <div class="card-header">
+            <div class="card-icon" style="background:rgba(16,217,164,.12);">📋</div>
+            ملخص المحتوى
+          </div>
+          <div style="font-size:15px;line-height:2;color:#cbd5e1;" id="summary-text"></div>
+        </div>
+
+        <!-- Claims -->
+        <div class="result-card" id="card-claims">
+          <div class="card-header">
+            <div class="card-icon" style="background:rgba(14,165,233,.12);">📌</div>
+            الادعاءات والمعلومات الرئيسية
+          </div>
+          <div id="claims-list"></div>
+        </div>
+
+        <!-- Sentiment + Bias -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;" class="two-col">
+          <div class="result-card" id="card-sentiment" style="margin-bottom:0;">
+            <div class="card-header">
+              <div class="card-icon" style="background:rgba(167,139,250,.12);">💭</div>
+              تحليل المشاعر
+            </div>
+            <div id="sentiment-bars"></div>
+          </div>
+          <div class="result-card" id="card-bias" style="margin-bottom:0;">
+            <div class="card-header">
+              <div class="card-icon" style="background:rgba(251,191,36,.12);">⚖️</div>
+              التحيز والإطار الإعلامي
+            </div>
+            <div id="bias-content"></div>
+          </div>
+        </div>
+
+        <!-- Suggestions -->
+        <div class="result-card" id="card-suggestions">
+          <div class="card-header">
+            <div class="card-icon" style="background:rgba(16,217,164,.12);">💡</div>
+            اقتراحات للصحفي
+          </div>
+          <div id="suggestions-list"></div>
+        </div>
+
+        <!-- Warning -->
+        <div class="warning-banner" style="margin-bottom:18px;">
+          <span>⚠️</span>
+          <span>هذا تحليل مدعوم بالذكاء الاصطناعي. يُنصح دائماً بالتدقيق البشري والتحقق من المصادر الأصلية.</span>
+        </div>
+
+        <!-- Actions -->
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:36px;">
+          <button class="btn-primary" onclick="showPage('analyze')" style="flex:1;justify-content:center;">
+            ← تحليل محتوى جديد
+          </button>
+          <button class="btn-ghost" onclick="copyReport()" id="copy-btn" style="flex:1;text-align:center;">
+            📋 نسخ التقرير
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────
+var currentTab = 'text';
+var uploadedText = '';
+var lastResult = null;
+
+// ─── NAVIGATION ──────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.getElementById('page-' + name).classList.add('active');
+  if (name === 'results') {
+    document.getElementById('loading-state').style.display = 'flex';
+    document.getElementById('results-content').style.display = 'none';
+  }
+  window.scrollTo(0, 0);
+}
+
+// ─── TABS ────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  ['text','url','upload'].forEach(function(t){
+    document.getElementById('input-' + t).style.display = t === tab ? 'block' : 'none';
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+  });
+}
+
+// ─── CHAR COUNT ──────────────────────────────
+document.getElementById('content-text').addEventListener('input', function(){
+  document.getElementById('char-count').textContent = this.value.length + ' حرف';
+});
+
+// ─── EXAMPLE TEXT ────────────────────────────
+function loadExample() {
+  var ex = 'أعلنت الحكومة اليوم عن حزمة إصلاحات اقتصادية جديدة تشمل خفض الضرائب على المؤسسات الصغيرة بنسبة 15%، وزيادة الاستثمارات في قطاع التكنولوجيا بمليار دولار خلال السنتين القادمتين. وأكد المسؤولون أن هذه الإجراءات ستخلق 50,000 فرصة عمل جديدة بحلول 2026. في المقابل، وصفت المعارضة الخطة بـ"المناورة الانتهازية"، مستندةً إلى تقارير مستقلة تشير إلى أن أرقام التشغيل المُعلنة مبالغ فيها بنسبة تتجاوز 40%. وطالبت منظمات المجتمع المدني بنشر دراسات الجدوى الاقتصادية كاملةً، مؤكدةً غياب أي استشارة شعبية حقيقية قبل الإعلان.';
+  document.getElementById('content-text').value = ex;
+  document.getElementById('char-count').textContent = ex.length + ' حرف';
+}
+
+// ─── FILE UPLOAD ─────────────────────────────
+function onDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
+function onDragLeave()  { document.getElementById('drop-zone').classList.remove('drag-over'); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+}
+function onFileChange(e) { if (e.target.files[0]) processFile(e.target.files[0]); }
+function processFile(file) {
+  if (file.type !== 'text/plain') {
+    document.getElementById('file-info').style.display = 'block';
+    document.getElementById('file-info').textContent = '⚠️ يُدعم فقط ملفات TXT حالياً';
+    document.getElementById('file-info').style.color = '#f97316';
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    uploadedText = e.target.result;
+    document.getElementById('file-info').style.display = 'block';
+    document.getElementById('file-info').textContent = '✓ ' + file.name + ' — جاهز للتحليل';
+    document.getElementById('file-info').style.color = '#10d9a4';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+// ─── GET CONTENT ─────────────────────────────
+function getContent() {
+  if (currentTab === 'text')   return document.getElementById('content-text').value.trim();
+  if (currentTab === 'url')    return document.getElementById('content-url').value.trim() ? 'الرابط: ' + document.getElementById('content-url').value.trim() : '';
+  if (currentTab === 'upload') return uploadedText;
+  return '';
+}
+
+// ─── LOADING MESSAGES ────────────────────────
+var loadMsgs = ['جارٍ قراءة المحتوى...','تحليل الادعاءات...','قياس المشاعر...','كشف التحيز...','إعداد التقرير النهائي...'];
+var loadIdx = 0, loadTimer = null;
+function startLoading() {
+  loadIdx = 0;
+  document.getElementById('loading-text').textContent = loadMsgs[0];
+  loadTimer = setInterval(function(){
+    loadIdx = (loadIdx + 1) % loadMsgs.length;
+    document.getElementById('loading-text').textContent = loadMsgs[loadIdx];
+  }, 2000);
+}
+function stopLoading() { clearInterval(loadTimer); }
+
+// ─── MAIN ANALYSIS ───────────────────────────
+async function startAnalysis() {
+  var content = getContent();
+  var errEl = document.getElementById('error-msg');
+  errEl.style.display = 'none';
+
+  if (!content || content.length < 20) {
+    errEl.style.display = 'block';
+    errEl.textContent = 'يرجى إدخال محتوى كافٍ للتحليل (20 حرف على الأقل).';
+    return;
+  }
+
+  var btn = document.getElementById('analyze-btn');
+  btn.disabled = true;
+  btn.textContent = 'جارٍ التحليل...';
+  showPage('results');
+  startLoading();
+
+  try {
+    // استدعاء API الخادم (آمن — المفتاح لا يُكشف للمستخدم)
+    var response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content })
+    });
+
+    var data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'خطأ من الخادم');
+    }
+
+    stopLoading();
+    renderResults(data);
+
+  } catch (err) {
+    stopLoading();
+    // في حالة الخطأ: نعرض رسالة وعودة لصفحة التحليل
+    showPage('analyze');
+    errEl.style.display = 'block';
+    errEl.textContent = 'حدث خطأ: ' + (err.message || 'يرجى المحاولة مجدداً.');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔍 حلّل المحتوى الآن';
+}
+
+// ─── RENDER RESULTS ──────────────────────────
+function renderResults(r) {
+  lastResult = r;
+
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('results-content').style.display = 'flex';
+
+  // Trust score
+  var score = Math.min(100, Math.max(0, Math.round(r.trust_score || 50)));
+  document.getElementById('trust-score').textContent = score;
+  var color = score >= 70
+    ? 'linear-gradient(90deg,#10d9a4,#22c55e)'
+    : score >= 40
+    ? 'linear-gradient(90deg,#f59e0b,#fbbf24)'
+    : 'linear-gradient(90deg,#ef4444,#f97316)';
+  var label = score >= 70 ? 'موثوقية عالية' : score >= 40 ? 'موثوقية متوسطة — تحقق إضافي مطلوب' : 'موثوقية منخفضة — تدقيق مكثف ضروري';
+  document.getElementById('trust-label').textContent = label;
+
+  setTimeout(function(){
+    document.getElementById('trust-bar').style.background = color;
+    document.getElementById('trust-bar').style.width = score + '%';
+    var tc = document.getElementById('trust-card');
+    tc.style.transition = 'opacity .5s, transform .5s';
+    tc.style.opacity = '1'; tc.style.transform = 'translateY(0)';
+  }, 150);
+
+  // Summary
+  document.getElementById('summary-text').textContent = r.summary || '—';
+
+  // Claims
+  var cl = document.getElementById('claims-list');
+  cl.innerHTML = '';
+  (r.claims || []).forEach(function(c){
+    var d = document.createElement('div'); d.className = 'claim-item';
+    d.innerHTML = '<div class="claim-dot"></div><div>' + escHtml(c) + '</div>';
+    cl.appendChild(d);
+  });
+
+  // Sentiment
+  var sentColors = {'إيجابي':'#10d9a4','محايد':'#94a3b8','سلبي':'#f97316','تحريضي':'#ef4444'};
+  var sb = document.getElementById('sentiment-bars');
+  sb.innerHTML = '';
+  var sent = r.sentiment || {};
+  Object.keys(sent).forEach(function(k){
+    var pct = Math.round(sent[k]);
+    var row = document.createElement('div'); row.className = 'emotion-row';
+    row.innerHTML = '<div class="emotion-lbl">' + k + '</div>' +
+      '<div class="progress-bg" style="flex:1;height:7px;"><div class="progress-fill" style="background:' + (sentColors[k]||'#94a3b8') + ';width:0%;" data-pct="' + pct + '"></div></div>' +
+      '<div class="emotion-pct">' + pct + '%</div>';
+    sb.appendChild(row);
+  });
+  setTimeout(function(){
+    sb.querySelectorAll('[data-pct]').forEach(function(el){ el.style.width = el.getAttribute('data-pct') + '%'; });
+  }, 350);
+
+  // Bias
+  var bias = r.bias || {};
+  var bColor = {'منخفض':'#10d9a4','متوسط':'#f59e0b','عالٍ':'#ef4444','عالي':'#ef4444'}[bias.level] || '#94a3b8';
+  document.getElementById('bias-content').innerHTML =
+    '<div class="stat-chip" style="background:' + bColor + '20;color:' + bColor + ';border:1px solid ' + bColor + '40;margin-bottom:12px;">● مستوى: ' + escHtml(bias.level||'—') + '</div>' +
+    '<div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px;">نوع التحيز</div>' +
+    '<div style="font-size:13px;color:#cbd5e1;margin-bottom:10px;line-height:1.7;">' + escHtml(bias.type||'—') + '</div>' +
+    '<div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px;">الإطار الإعلامي</div>' +
+    '<div style="font-size:13px;color:#cbd5e1;line-height:1.7;">' + escHtml(bias.frame||'—') + '</div>';
+
+  // Suggestions
+  var sugIcons = ['🔎','💬','📁','🌐','✅'];
+  var sl = document.getElementById('suggestions-list');
+  sl.innerHTML = '';
+  (r.suggestions || []).forEach(function(s, i){
+    var d = document.createElement('div'); d.className = 'suggestion-item';
+    d.innerHTML = '<span style="font-size:18px;flex-shrink:0;">' + sugIcons[i % sugIcons.length] + '</span><div style="line-height:1.85;">' + escHtml(s) + '</div>';
+    sl.appendChild(d);
+  });
+
+  // Animate cards
+  var cards = ['card-summary','card-claims','card-sentiment','card-bias','card-suggestions'];
+  cards.forEach(function(id, i){
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.style.opacity = '0'; el.style.transform = 'translateY(16px)'; el.style.animation = 'none';
+    setTimeout(function(){
+      el.style.animation = 'fadeUp .55s ease forwards';
+    }, 200 + i * 100);
+  });
+}
+
+// ─── COPY REPORT ─────────────────────────────
+function copyReport() {
+  if (!lastResult) return;
+  var r = lastResult;
+  var lines = [
+    '═══════════════════════════════',
+    '      تقرير أنجور — تحليل إعلامي',
+    '═══════════════════════════════',
+    '',
+    'نسبة الموثوقية: ' + (r.trust_score||'—') + ' / 100',
+    '',
+    '● الملخص:',
+    r.summary || '—',
+    '',
+    '● الادعاءات الرئيسية:',
+  ];
+  (r.claims||[]).forEach(function(c,i){ lines.push((i+1)+'. '+c); });
+  lines.push('','● التحيز الإعلامي:');
+  if (r.bias) { lines.push('  المستوى: '+(r.bias.level||'—')); lines.push('  النوع: '+(r.bias.type||'—')); lines.push('  الإطار: '+(r.bias.frame||'—')); }
+  lines.push('','● اقتراحات للصحفي:');
+  (r.suggestions||[]).forEach(function(s,i){ lines.push((i+1)+'. '+s); });
+  lines.push('','───────────────────────────────');
+  lines.push('Anjour · تحليل المحتوى الإعلامي بالذكاء الاصطناعي');
+  navigator.clipboard.writeText(lines.join('\n')).then(function(){
+    var btn = document.getElementById('copy-btn');
+    btn.textContent = '✓ تم النسخ!';
+    setTimeout(function(){ btn.textContent = '📋 نسخ التقرير'; }, 2500);
+  });
+}
+
+// ─── UTILS ───────────────────────────────────
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
